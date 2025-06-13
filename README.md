@@ -1,2 +1,4 @@
 # Bunbury-Offshore-Wind
-Analysis of the wind resource in declared area off the coast of Bunbury, WA
+In 2024 Minister for Climate Change and Energy, Chris Bowen, declared an area 30km off the coast of Bunbury, Western Australia as a potential location for offshore wind power generation, citing 1.5GW of clean energy potential within the site. After public consultation the Declared Area was split into two parts, covering 3,995 km squared, shown in Figure 1. Bunbury Offshore Wind Farm Pty Ltd has been allocated a preliminary feasibility licence, with another two proposals shortlisted. This assessment will investigate the wind resource potential in the area, consider suitable turbines and estimate annual energy production. Subsequent analysis will focus on wind farm optimisation including layout, turbulence effects, and substructures. 
+![image](https://github.com/user-attachments/assets/84faa040-d7d9-4e0f-8257-18a197bbf79b)
+Fiugure 1: Aerial view of the Declared Area OEI-03-2024 (Part 1 and 2) off the coast of Bunbury, Western Australia. 
