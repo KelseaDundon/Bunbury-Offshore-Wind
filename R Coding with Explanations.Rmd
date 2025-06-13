@@ -1,0 +1,318 @@
+---
+title: "Bunbury Offshore Wind Popwer Opportunity Assessment"
+author: "Kelsea Dundon"
+date: "`r Sys.Date()`"
+output: html_document
+---
+# Bunbury Offshore Wind Popwer Opportunity Assessment
+## The Wind Resource
+### Wind Data Sources
+wind atlas
+Data modelled at 150 m
+
+### Wind Data Analysis
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(usethis)
+library(gitcreds)
+library (openair)
+library(openairmaps)
+library(gplots)
+library(lubridate)
+library(hms)
+library(ggplot2)
+library(tibble)
+library(fitdistrplus)
+library(bReeze)
+library(RColorBrewer)
+library(XML)
+library(RgoogleMaps)
+```
+
+```{r, include=FALSE}
+# Set-up configuration for GitHub
+use_git_config(user.name = "KelseaDundon", user.email = "kelsea.dundon@gmail.com")
+gitcreds_set()
+```
+
+```{r, include=FALSE}
+# Setup theme for plots
+blue_theme <- function() {
+  theme(
+    panel.border = element_rect(colour = "black", fill = NA, linetype = 2),
+    panel.background = element_rect(fill = "aliceblue"),
+    panel.grid.major.x = element_line(colour = "lightgrey", linetype = 1, size = 0.5),
+    panel.grid.minor.x = element_blank(),
+    panel.grid.major.y =  element_line(colour = "lightgrey", linetype = 1, size = 0.5),
+    panel.grid.minor.y = element_blank(),
+    axis.text = element_text(colour = "black", size = 8),
+    axis.title = element_text(colour = "black", face = "bold", size = 10),
+    axis.ticks = element_line(colour = "black"),
+    legend.key.size = unit(0.3, 'cm'), 
+    legend.key.height = unit(0.3, 'cm'), 
+    legend.key.width = unit(0.3, 'cm'), 
+    legend.title = element_text(size = 10, face = "bold"), 
+    legend.text = element_text(size = 8)
+  )
+}
+```
+
+#### Import data & Check for errors
+* No NAN's, NA's or blank cells
+* Max wind speed in data is 29.06 m/s, minimum is 0.2769
+* In observational data wind speeds less than 0.5m/s may not be used in analysis, particularly if they are paired with directional data as the direction may not have been accurately recorded at such a low wind speed. However this is modelled data and directions are not included/will not be used so the data will be retained in the analysis. 
+```{r}
+# Import and inspect the data
+Wind_Data_Raw <- read.table('Wind_Data_Lat-33_Long+114.csv', header = TRUE, sep = ',', quote = "")
+head(Wind_Data_Raw)
+```
+From above we can see the data format is pretty simple, a datetime column and a windspeed. 
+```{r}
+# Check for missing data in datetime column
+is.nan(Wind_Data_Raw$datetime)["TRUE"]
+is.na(Wind_Data_Raw$datetime)["TRUE"]
+Wind_Data_Raw$datetime[""]
+
+# Check for missing data in windspeed column, or for wind speeds less than 0.5m/s
+is.nan(Wind_Data_Raw$wind_speed)["TRUE"]
+is.na(Wind_Data_Raw$wind_speed)["TRUE"]
+
+# Max and min wind speeds (will give an idea on if there is problematic data to be further investigated)
+max(Wind_Data_Raw$wind_speed)
+min(Wind_Data_Raw$wind_speed)
+```
+
+#### Data Preparation
+I will add columns that will let me split out the data better;
+  * Year, 
+  * month, 
+  * day of year, 
+  * hour of day, 
+  * season (Dec/Jan/Feb = Summer, Mar/Apr/May = Autumn, Jun/Jul/Aug = Winter, Sep/Oct/Nov = Spring )
+
+```{r}
+# Convert datetime to POSIXct format
+Wind_Data_Raw$datetime <- as.POSIXct(Wind_Data_Raw$datetime, format = "%d/%m/%Y %H:%M", tz = "UTC")
+
+# Create new columns for Date, Hour, Year, Month, Season
+Wind_Data <- data.frame(Wind_Data_Raw[c(1:10000),])
+Wind_Data$Date <- as.Date(Wind_Data$datetime)
+Wind_Data$Hour <- hour(Wind_Data$datetime)
+Wind_Data$Year <- year(Wind_Data$Date)
+Wind_Data$Month <- month(Wind_Data$Date)
+
+# Create a column for wind direction (data does not contain this but the bReeze package will need it)
+Wind_Data$Dir <- 1
+
+# Label seasons
+indx <- setNames(rep(c("summer", "autumn", "winter", "spring"), each = 3), c(12, 1:11))
+Wind_Data$Season <- unname(indx[as.character(Wind_Data$Month)])
+
+head(Wind_Data)
+dim(Wind_Data)
+```
+
+#### Wind Characterisation
+```{r}
+# All data 
+ggplot(data = Wind_Data) +
+  geom_histogram(mapping = aes(x=wind_speed), binwidth=0.5, color="black", fill="gray") +
+  labs(title = 'Hourly Wind Speed Distribution') +
+  xlab('Wind Speed (m/s)') +
+  blue_theme()
+
+# Calculate the scale and shape factors from fitting a Weibull Distribution
+fw <- fitdist(Wind_Data$wind_speed, "weibull")
+summary(fw)
+```
+#### Seasonal Wind Variation
+```{r}
+# Separated by season
+Wind_Winter <- Wind_Data[Wind_Data$Season == "winter", ]
+ggplot(data = Wind_Winter) +
+  geom_histogram(mapping = aes(x=wind_speed) , binwidth=0.5, color="black", fill="gray") +
+  labs(title = 'Hourly Wind Speed Distribution in Winter') +
+  xlab('Wind Speed (m/s)') +
+  blue_theme()
+
+Wind_Summer <- Wind_Data[Wind_Data$Season == "summer", ]
+ggplot(data = Wind_Summer) +
+  geom_histogram(mapping = aes(x=wind_speed) , binwidth=0.5, color="black", fill="gray") +
+  labs(title = 'Hourly Wind Speed Distribution in Summer') +
+  xlab('Wind Speed (m/s)') +
+  blue_theme()
+
+Wind_Autumn <- Wind_Data[Wind_Data$Season == "autumn", ]
+ggplot(data = Wind_Autumn) +
+  geom_histogram(mapping = aes(x=wind_speed) , binwidth=0.5, color="black", fill="gray") +
+  labs(title = 'Hourly Wind Speed Distribution in Autumn') +
+  xlab('Wind Speed (m/s)') +
+  blue_theme()
+
+Wind_Spring <- Wind_Data[Wind_Data$Season == "spring", ]
+ggplot(data = Wind_Spring) +
+  geom_histogram(mapping = aes(x=wind_speed) , binwidth=0.5, color="black", fill="gray") +
+  labs(title = 'Hourly Wind Speed Distribution in Spring') +
+  xlab('Wind Speed (m/s)') +
+  blue_theme()
+```
+
+```{r}
+# Lets show the seasonal differences
+ggplot(data = Wind_Data) +
+  geom_density(aes(x=wind_speed, fill=Season), alpha=0.3)
+
+ggplot(data = Wind_Data) +
+  geom_boxplot(aes(x=wind_speed, fill=Season))
+
+# Fitting the Weibull Distribution to the seasonal data to see how the shape (a) and scale (k) factors vary
+Data_summer <- subset(Wind_Data, Season == "summer")
+fw_summer <- fitdist(Data_summer$wind_speed, "weibull")
+summary(fw_summer)
+
+Data_winter <- subset(Wind_Data, Season == "winter")
+fw_winter <- fitdist(Data_winter$wind_speed, "weibull")
+summary(fw_winter)
+
+Data_spring <- subset(Wind_Data, Season == "spring")
+fw_spring <- fitdist(Data_spring$wind_speed, "weibull")
+summary(fw_spring)
+
+Data_autumn <- subset(Wind_Data, Season == "autumn")
+fw_autumn <- fitdist(Data_autumn$wind_speed, "weibull")
+summary(fw_autumn)
+```
+
+#### Diurnal Variation
+```{r}
+# Calculate the mean wind speed for each hour of the day in each season
+Mean_hr_szn <- aggregate(data = Wind_Data, wind_speed ~ Season + Hour, mean)
+print(Mean_hr_szn)
+
+#Can now join into the existing dataframe, or just use seperately for this graph
+# Graph together
+ggplot(data = Mean_hr_szn) +
+  geom_line(aes(x=Hour, y=wind_speed, color=Season))
+```
+
+#### Synoptic Variations
+These variations occur on the multi-day scale and are usually associated with weather formations, they are less predictable from historical data, but the use of data with meteorological forecasting can significantly increase predictability. Of use at this stage of analysis is an understanding of the frequency of the variations (i.e. on average are most weather formations 3 days, 5 days, 14 day events). The data source currently being used does not contain direction data, which will make changes associated with large weather formations difficult to identify. It is recommended that this analysis is done on another data source and so it will be ommitted at this stage. 
+
+#### Turbulence
+As this data is on the hourly scale it is not possible to see the impact of turbulence. 
+For this analysis a Turbulence Intensity will be assumed. 
+This is acceptable at this stage as the location is offshore, reducing topographical impacts of turbulence,
+
+#### Power Density
+Apply Betz limit
+Assume a standard air density of 1.225 kg/m³
+```{r}
+p <- 1.225
+Cpmax = 16/27
+Um = mean(Wind_Data$wind_speed)
+Um
+Um_summer = mean(Data_summer$wind_speed)
+Um_summer
+
+Um_winter = mean(Data_winter$wind_speed)
+Um_winter
+
+Um_spring = mean(Data_spring$wind_speed)
+Um_spring
+
+Um_autumn = mean(Data_autumn$wind_speed)
+Um_autumn
+
+# Wind Power Density (W/m^2)
+Pideal = (1/2) * p * Um^3
+Pideal
+
+# Maximum Power Density Available (W/m^2)
+Pmax = Cpmax * Pideal
+Pmax
+```
+
+## Turbine Power Curves
+The bReeze package contains many power curves in .wtg and .pow formats. For this analysis X turbines have been selected that are commericially used in offshore wind farms. 
+```{r}
+pc_wtg_str <- "Nordex_N80_2.5MW	Nordex_N90_2.5MW_HS"
+pc_wtg <- strsplit(pc_wtg_str,"[[:space:]]")
+print(pc_wtg)
+pc_pow_str <- "Bonus_82.4m_2.3MW	Bonus_MKIV_600kW	Clipper_LibertyC89_2.5MW"
+pc_pow <- strsplit(pc_pow_str,"[[:space:]]")
+print(pc_pow)
+```
+## Annual Energy Production Estimation
+Now we need to apply some existing turbine power curves to get an idea of the actual power that we could extract. 
+
+### Apply Power Curves
+Write a loop function that one by one pulls out the power curves, applies them, puts the results in a table and 
+Test first how to apply the power curve
+```{r}
+# Convert POSIXct to POSIXlt
+Wind_Data$datetime_lt <- as.POSIXlt(Wind_Data$datetime)
+
+# Ensure wind_speed is numeric (just in case)
+Wind_Data$wind_speed <- as.numeric(Wind_Data$wind_speed)
+
+# Check set-up before forming set
+length(Wind_Data$datetime_lt) == length(Wind_Data$wind_speed)
+is.na(Wind_Data$datetime_lt)["TRUE"]
+is.na(Wind_Data$wind_speed)["TRUE"]
+is.numeric(Wind_Data$wind_speed)
+range(Wind_Data$datetime_lt)
+
+# Create placeholders with NAs for missing fields
+n <- nrow(Wind_Data)
+
+# Set 'n' to exact number of rows
+n <- nrow(Wind_Data)
+
+# Check for any unexpected NA
+sum(is.na(Wind_Data$wind_speed))   # Should be 0 ideally
+sum(is.na(Wind_Data$datetime_lt))  # Should be 0 ideally
+
+# Build the set
+Wind_Data_set <- set(
+  height = 150,
+  v.avg = Wind_Data$wind_speed, dir.avg = Wind_Data$Dir
+)
+
+# Create mast object with POSIXlt timestamp
+Wind_Data_mast <- mast(timestamp = Wind_Data$datetime_lt, set = Wind_Data_set, loc = NULL, desc = "Modelled data 150m")
+
+# Check output
+Wind_Data_mast
+```
+
+```{r}
+Wind_Data_set
+```
+
+```{r}
+# calculate wind profile 
+#pf <-  windprofile(mast = Wind_Data_mast, v.set = 1, dir.set=1, num.sectors=12, method=c("hellman", "loglm", "fixed"), alpha=NULL, digits=1, print=TRUE)
+
+    # import power curve 
+#pc <- pc("Vestas_V236_15.0MW.pow") 
+#pc$v
+#pc$P
+#plot(pc, cp=TRUE, ct=TRUE)
+
+print.pc(pc)
+
+day.plot(mast = Wind_Data_mast, set = 1, dir.set = 1, signal = "v.avg")
+
+```
+
+```{r}
+# calculate annual energy production 
+aep <- aep(profile=pf, pc=pc, hub.h=135) 
+
+# plot AEP 
+plot(aep)
+
+aep$capacity
+```
+
+# Conclusions
