@@ -30,12 +30,6 @@ library(RgoogleMaps)
 ```
 
 ```{r, include=FALSE}
-# Set-up configuration for GitHub
-use_git_config(user.name = "KelseaDundon", user.email = "kelsea.dundon@gmail.com")
-gitcreds_set()
-```
-
-```{r, include=FALSE}
 # Setup theme for plots
 blue_theme <- function() {
   theme(
@@ -55,6 +49,7 @@ blue_theme <- function() {
     legend.text = element_text(size = 8)
   )
 }
+
 ```
 
 #### Import data & Check for errors
@@ -233,21 +228,85 @@ Pmax
 ```
 
 ## Turbine Power Curves
-The bReeze package contains many power curves in .wtg and .pow formats. For this analysis X turbines have been selected that are commericially used in offshore wind farms. 
+The bReeze package contains many power curves in .wtg and .pow formats. 
 ```{r}
-pc_wtg_str <- "Nordex_N80_2.5MW	Nordex_N90_2.5MW_HS"
-pc_wtg <- strsplit(pc_wtg_str,"[[:space:]]")
-print(pc_wtg)
-pc_pow_str <- "Bonus_82.4m_2.3MW	Bonus_MKIV_600kW	Clipper_LibertyC89_2.5MW"
-pc_pow <- strsplit(pc_pow_str,"[[:space:]]")
-print(pc_pow)
+# Pulling out all of the power-curves within bReeze
+bReeze_files <- list.files(system.file(package = 'bReeze'), recursive = T, full.names = T)
+# This generated a list of all the files, now I'll exclude those that are not power curve file names. PC files start from line 23 and end on 115
+pc_files1 <- bReeze_files[c(23:115)]
+pc_files2 <- substr(pc_files1, 67,100 )
+pc_files2
 ```
-## Annual Energy Production Estimation
-Now we need to apply some existing turbine power curves to get an idea of the actual power that we could extract. 
+For this analysis offshore turbines will be used, the first list below is commercially available/installed turbines, the second list is protoype turbines (some of which are being installed in wind farms currently under construction, and the third is concept offshore turbines.For currently installed turbines the list has been refined to only wind farms commissioned after 2020 to exclude turbines that have been superseded by the advance in technology. 
 
-### Apply Power Curves
-Write a loop function that one by one pulls out the power curves, applies them, puts the results in a table and 
-Test first how to apply the power curve
+### Commercially used:
+MHI Vestas V164-9.5 MW
+MHI Vestas V174-9.5 MW
+MHI Vestas V164-10 MW
+Vestas V236-15MW
+Siemens Gamesa SG-14-222 DD 14.7MW
+Siemens Gamesa SWT-4.0-146
+Siemens Gamesa SWT-7.0-154
+Siemens Gamesa SG 8.0-167 DD
+Siemens Gamesa SWT-8.4-167
+Siemens Gamesa 11.0-200 DD
+Siemens Gamesa SG 14-236 DD
+Siemens Gamesa 14-222 DD
+GE Haliade 150-6MW
+GE Wind Energy Haliade-X 13MW or 13.6MW
+Mingyang Wind Power MySE 12-242 12MW
+Mingyang MY-5.5 MW
+MingYang MySE5.5-155
+Mingyang MySE6.45-180
+CSIC Haizhuang H220-8.35
+MySE6.8-158
+MySE8.3-180
+
+### Prototypes:
+Siemens Gamesa SG DD-276 21.5MW
+Mingyang Wind Power MySE18.X-20MW 18.X to 20MW
+Dongfang Electric DEW-18MW-260 18MW
+Mingyang Wind Power MySE16.0-260 16MW
+Goldwind GWH252 16MW
+GE Wind Energy Haliade-X 14.7
+
+### Concept Designs:
+Dongfang Electric DEW-26MW-310
+Mingyang Wind Power MySE22MW
+CSSC Haizhuang H260-18MW
+
+### Power Curves for Analysis
+However most of the turbines listed above, especially the newer and more powerful turbines do not have power curves in the bReeze package, and they are not freely available online. So that this analysis can progress, and consider a range of turbines, all turbines rated 3MW or above from bReeze will be used.
+"Enercon_E101_3.0MW.pow" 
+"Enercon_E126_7.5MW.pow"
+"Enercon_E82_3.0MW.pow"
+"Vestas_V164_7.0MW_os.pow"  
+"Vestas_V90_3.0MW.pow"          
+"Vestas_V112_3MW.pow"
+"Leitwind_LTW101_3.0MW.pow"
+"Repower_5M_5.0MW.pow" 
+"Siemens_SWT-3.6MW-107m.pow"
+"Siemens_SWT-3.6MW-120m.pow" 
+
+
+```{r}
+PC_File <- c("Enercon_E101_3.0MW.pow", "Enercon_E126_7.5MW.pow", "Enercon_E82_3.0MW.pow", "Vestas_V164_7.0MW_os.pow", "Vestas_V90_3.0MW.pow", "Vestas_V112_3MW.pow", "Leitwind_LTW101_3.0MW.pow", "Repower_5M_5.0MW.pow", "Siemens_SWT-3.6MW-107m.pow", "Siemens_SWT-3.6MW-120m.pow")
+
+# Additional data for the analysis has been sourced from thewindpower.net
+Power_Curves <- as.data.frame(PC_File)
+Power_Curves$HH_min_m <- c(99,135,59,105,99,84,95,95,80,88)
+Power_Curves$HH_max_m <- c(149,135,84,150,149,119,143,117,96,90)
+Power_Curves$Rated_Power_MW <- c(3.0,7.5,3.0,7.0,3.05,3.0,3.0,5.08,3.6,3.6)
+Power_Curves$Rotor_Dia_m <- c(101,127,82,164,101,112,100.9,126.5,107,120)
+Power_Curves$Cutin_speed_ms <- c(2,2.5,2,4,2,3.5,2.7,3.5,3.5,3.5)
+Power_Curves$Rated_speed_ms <- c(13,17,17,11,13,15.5,15,14,16.5,12)
+Power_Curves$Cutout_speed_ms <- c(25,25,25,25,25,25,25,30,25,25)
+Power_Curves$Offshore <- c("no","no","no","yes","no","no","no","yes","yes","yes")
+head(Power_Curves)
+```
+
+## Wind Power Generation Estimates
+Power curves are ready to apply, now the wind data needs to be set-up into the format required by bReeze. 
 ```{r}
 # Convert POSIXct to POSIXlt
 Wind_Data$datetime_lt <- as.POSIXlt(Wind_Data$datetime)
@@ -275,7 +334,8 @@ sum(is.na(Wind_Data$datetime_lt))  # Should be 0 ideally
 # Build the set
 Wind_Data_set <- set(
   height = 150,
-  v.avg = Wind_Data$wind_speed, dir.avg = Wind_Data$Dir
+  v.avg = Wind_Data$wind_speed, 
+  dir.avg = Wind_Data$Dir
 )
 
 # Create mast object with POSIXlt timestamp
@@ -283,36 +343,265 @@ Wind_Data_mast <- mast(timestamp = Wind_Data$datetime_lt, set = Wind_Data_set, l
 
 # Check output
 Wind_Data_mast
-```
 
-```{r}
-Wind_Data_set
-```
-
-```{r}
 # calculate wind profile 
-#pf <-  windprofile(mast = Wind_Data_mast, v.set = 1, dir.set=1, num.sectors=12, method=c("hellman", "loglm", "fixed"), alpha=NULL, digits=1, print=TRUE)
-
-    # import power curve 
-#pc <- pc("Vestas_V236_15.0MW.pow") 
-#pc$v
-#pc$P
-#plot(pc, cp=TRUE, ct=TRUE)
-
-print.pc(pc)
-
+pf <-  windprofile(mast = Wind_Data_mast, v.set = 1, dir.set=1, num.sectors=12, method=c("hellman", "loglm", "fixed"), alpha=NULL, digits=1, print=TRUE)
 day.plot(mast = Wind_Data_mast, set = 1, dir.set = 1, signal = "v.avg")
-
 ```
+### Evaluation Areas
+Now the wind data is prepared we can apply the power curves. I will be looking at the following for each;
 
+  * Annual Energy Production
+  * Capacity Factor
+  * How does the mean wind speed align with the rated wind speed
+  * Energy production over an average day per year/season
+
+#### Enercon E101
 ```{r}
-# calculate annual energy production 
-aep <- aep(profile=pf, pc=pc, hub.h=135) 
+# Power curve 
+pc_1 <- pc(Power_Curves$PC_File[1])
+plot(pc_1, cp=TRUE, ct=TRUE)
 
-# plot AEP 
-plot(aep)
+# Hub Height min & max
+hh1_min <- Power_Curves$HH_min_m[1]
+hh1_max <- Power_Curves$HH_max_m[1]
 
-aep$capacity
+# calculate annual energy production with minimum hub height
+aep_1_hhmin <- aep(profile = pf, pc = pc_1, hub.h = hh1_min) 
+capacity_1_hhmin <- aep_1_hhmin$capacity
+AEP_Plot_1_hhmin <- plot(aep_1_hhmin)
+
+# calculate annual energy production with maximum hub height
+aep_1_hhmax <- aep(profile = pf, pc = pc_1, hub.h = hh1_max) 
+capacity_1_hhmax <- aep_1_hhmax$capacity
+AEP_Plot_1_hhmax <- plot(aep_1_hhmax)
+
+# plot energy production over typical day
+
+
 ```
 
-# Conclusions
+#### Enercon E126
+```{r}
+# Power curve 
+pc_2 <- pc(Power_Curves$PC_File[2])
+plot(pc_2, cp=TRUE, ct=TRUE)
+
+# Hub Height min & max
+hh2_min <- Power_Curves$HH_min_m[2]
+hh2_max <- Power_Curves$HH_max_m[2]
+
+# calculate annual energy production with minimum hub height
+aep_2_hhmin <- aep(profile = pf, pc = pc_2, hub.h = hh2_min) 
+capacity_2_hhmin <- aep_2_hhmin$capacity
+AEP_Plot_2_hhmin <- plot(aep_2_hhmin)
+
+# calculate annual energy production with maximum hub height
+aep_2_hhmax <- aep(profile = pf, pc = pc_2, hub.h = hh2_max) 
+capacity_2_hhmax <- aep_2_hhmax$capacity
+AEP_Plot_2_hhmax <- plot(aep_2_hhmax)
+
+# plot energy production over typical day
+
+
+```
+
+#### Enercon E82
+```{r}
+# Power curve 
+pc_3 <- pc(Power_Curves$PC_File[3])
+plot(pc_3, cp=TRUE, ct=TRUE)
+
+# Hub Height min & max
+hh3_min <- Power_Curves$HH_min_m[3]
+hh3_max <- Power_Curves$HH_max_m[3]
+
+# calculate annual energy production with minimum hub height
+aep_3_hhmin <- aep(profile = pf, pc = pc_3, hub.h = hh3_min) 
+capacity_3_hhmin <- aep_3_hhmin$capacity
+AEP_Plot_3_hhmin <- plot(aep_3_hhmin)
+
+# calculate annual energy production with maximum hub height
+aep_3_hhmax <- aep(profile = pf, pc = pc_3, hub.h = hh3_max) 
+capacity_3_hhmax <- aep_3_hhmax$capacity
+AEP_Plot_3_hhmax <- plot(aep_3_hhmax)
+
+# plot energy production over typical day
+
+
+```
+
+#### Vestas V164
+```{r}
+# Power curve 
+pc_4 <- pc(Power_Curves$PC_File[4])
+plot(pc_4, cp=TRUE, ct=TRUE)
+
+# Hub Height min & max
+hh4_min <- Power_Curves$HH_min_m[4]
+hh4_max <- Power_Curves$HH_max_m[4]
+
+# calculate annual energy production with minimum hub height
+aep_4_hhmin <- aep(profile = pf, pc = pc_4, hub.h = hh4_min) 
+capacity_4_hhmin <- aep_4_hhmin$capacity
+AEP_Plot_4_hhmin <- plot(aep_4_hhmin)
+
+# calculate annual energy production with maximum hub height
+aep_4_hhmax <- aep(profile = pf, pc = pc_4, hub.h = hh4_max) 
+capacity_4_hhmax <- aep_4_hhmax$capacity
+AEP_Plot_4_hhmax <- plot(aep_4_hhmax)
+
+# plot energy production over typical day
+
+
+```
+
+#### Vestas V90
+```{r}
+# Power curve 
+pc_5 <- pc(Power_Curves$PC_File[5])
+plot(pc_5, cp=TRUE, ct=TRUE)
+
+# Hub Height min & max
+hh5_min <- Power_Curves$HH_min_m[5]
+hh5_max <- Power_Curves$HH_max_m[5]
+
+# calculate annual energy production with minimum hub height
+aep_5_hhmin <- aep(profile = pf, pc = pc_5, hub.h = hh5_min) 
+capacity_5_hhmin <- aep_5_hhmin$capacity
+AEP_Plot_5_hhmin <- plot(aep_5_hhmin)
+
+# calculate annual energy production with maximum hub height
+aep_5_hhmax <- aep(profile = pf, pc = pc_5, hub.h = hh5_max) 
+capacity_5_hhmax <- aep_5_hhmax$capacity
+AEP_Plot_5_hhmax <- plot(aep_5_hhmax)
+
+# plot energy production over typical day
+
+
+```
+
+#### Vestas V112
+```{r}
+# Power curve 
+pc_6 <- pc(Power_Curves$PC_File[6])
+plot(pc_6, cp=TRUE, ct=TRUE)
+
+# Hub Height min & max
+hh6_min <- Power_Curves$HH_min_m[6]
+hh6_max <- Power_Curves$HH_max_m[6]
+
+# calculate annual energy production with minimum hub height
+aep_6_hhmin <- aep(profile = pf, pc = pc_6, hub.h = hh6_min) 
+capacity_6_hhmin <- aep_6_hhmin$capacity
+AEP_Plot_6_hhmin <- plot(aep_6_hhmin)
+
+# calculate annual energy production with maximum hub height
+aep_6_hhmax <- aep(profile = pf, pc = pc_6, hub.h = hh6_max) 
+capacity_6_hhmax <- aep_6_hhmax$capacity
+AEP_Plot_6_hhmax <- plot(aep_6_hhmax)
+
+# plot energy production over typical day
+
+
+```
+
+#### Leitwind LTW101
+```{r}
+# Power curve 
+pc_7 <- pc(Power_Curves$PC_File[7])
+plot(pc_7, cp=TRUE, ct=TRUE)
+
+# Hub Height min & max
+hh7_min <- Power_Curves$HH_min_m[7]
+hh7_max <- Power_Curves$HH_max_m[7]
+
+# calculate annual energy production with minimum hub height
+aep_7_hhmin <- aep(profile = pf, pc = pc_7, hub.h = hh7_min) 
+capacity_7_hhmin <- aep_7_hhmin$capacity
+AEP_Plot_7_hhmin <- plot(aep_7_hhmin)
+
+# calculate annual energy production with maximum hub height
+aep_7_hhmax <- aep(profile = pf, pc = pc_7, hub.h = hh7_max) 
+capacity_7_hhmax <- aep_7_hhmax$capacity
+AEP_Plot_7_hhmax <- plot(aep_7_hhmax)
+
+# plot energy production over typical day
+
+
+```
+
+#### Repower 5M
+```{r}
+# Power curve 
+pc_8 <- pc(Power_Curves$PC_File[8])
+plot(pc_8, cp=TRUE, ct=TRUE)
+
+# Hub Height min & max
+hh8_min <- Power_Curves$HH_min_m[8]
+hh8_max <- Power_Curves$HH_max_m[8]
+
+# calculate annual energy production with minimum hub height
+aep_8_hhmin <- aep(profile = pf, pc = pc_8, hub.h = hh8_min) 
+capacity_8_hhmin <- aep_8_hhmin$capacity
+AEP_Plot_8_hhmin <- plot(aep_8_hhmin)
+
+# calculate annual energy production with maximum hub height
+aep_8_hhmax <- aep(profile = pf, pc = pc_8, hub.h = hh8_max) 
+capacity_8_hhmax <- aep_8_hhmax$capacity
+AEP_Plot_8_hhmax <- plot(aep_8_hhmax)
+
+# plot energy production over typical day
+
+
+```
+
+#### Siemens SWT
+```{r}
+# Power curve 
+pc_9 <- pc(Power_Curves$PC_File[9])
+plot(pc_9, cp=TRUE, ct=TRUE)
+
+# Hub Height min & max
+hh9_min <- Power_Curves$HH_min_m[9]
+hh9_max <- Power_Curves$HH_max_m[9]
+
+# calculate annual energy production with minimum hub height
+aep_9_hhmin <- aep(profile = pf, pc = pc_9, hub.h = hh9_min) 
+capacity_9_hhmin <- aep_9_hhmin$capacity
+AEP_Plot_9_hhmin <- plot(aep_9_hhmin)
+
+# calculate annual energy production with maximum hub height
+aep_9_hhmax <- aep(profile = pf, pc = pc_9, hub.h = hh9_max) 
+capacity_9_hhmax <- aep_9_hhmax$capacity
+AEP_Plot_9_hhmax <- plot(aep_9_hhmax)
+
+# plot energy production over typical day
+
+
+```
+
+#### Siemens SWT
+```{r}
+# Power curve 
+pc_1 <- pc(Power_Curves$PC_File[1])
+plot(pc_1, cp=TRUE, ct=TRUE)
+
+# Hub Height min & max
+hh1_min <- Power_Curves$HH_min_m[1]
+hh1_max <- Power_Curves$HH_max_m[1]
+
+# calculate annual energy production with minimum hub height
+aep_1_hhmin <- aep(profile = pf, pc = pc_1, hub.h = hh1_min) 
+capacity_1_hhmin <- aep_1_hhmin$capacity
+AEP_Plot_1_hhmin <- plot(aep_1_hhmin)
+
+# calculate annual energy production with maximum hub height
+aep_1_hhmax <- aep(profile = pf, pc = pc_1, hub.h = hh1_max) 
+capacity_1_hhmax <- aep_1_hhmax$capacity
+AEP_Plot_1_hhmax <- plot(aep_1_hhmax)
+
+# plot energy production over typical day
+
+
+```
