@@ -30,12 +30,6 @@ library(RgoogleMaps)
 ```
 
 ```{r, include=FALSE}
-# Set-up configuration for GitHub
-use_git_config(user.name = "KelseaDundon", user.email = "kelsea.dundon@gmail.com")
-gitcreds_set()
-```
-
-```{r, include=FALSE}
 # Setup theme for plots
 blue_theme <- function() {
   theme(
@@ -233,21 +227,88 @@ Pmax
 ```
 
 ## Turbine Power Curves
-The bReeze package contains many power curves in .wtg and .pow formats. For this analysis X turbines have been selected that are commericially used in offshore wind farms. 
+The bReeze package contains many power curves in .wtg and .pow formats. 
 ```{r}
-pc_wtg_str <- "Nordex_N80_2.5MW	Nordex_N90_2.5MW_HS"
-pc_wtg <- strsplit(pc_wtg_str,"[[:space:]]")
-print(pc_wtg)
-pc_pow_str <- "Bonus_82.4m_2.3MW	Bonus_MKIV_600kW	Clipper_LibertyC89_2.5MW"
-pc_pow <- strsplit(pc_pow_str,"[[:space:]]")
-print(pc_pow)
+# Pulling out all of the power-curves within bReeze
+bReeze_files <- list.files(system.file(package = 'bReeze'), recursive = T, full.names = T)
+# This generated a list of all the files, now I'll exclude those that are not power curve file names. PC files start from line 23 and end on 115
+pc_files1 <- bReeze_files[c(23:115)]
+pc_files2 <- substr(pc_files1, 67,100 )
+pc_files2
 ```
+For this analysis offshore turbines will be used, the first list below is commercially available/installed turbines, the second list is protoype turbines (some of which are being installed in wind farms currently under construction, and the third is concept offshore turbines.For currently installed turbines the list has been refined to only wind farms commissioned after 2020 to exclude turbines that have been superseded by the advance in technology. 
+
+### Commercially used:
+MHI Vestas V164-9.5 MW
+MHI Vestas V174-9.5 MW
+MHI Vestas V164-10 MW
+Vestas V236-15MW
+Siemens Gamesa SG-14-222 DD 14.7MW
+Siemens Gamesa SWT-4.0-146
+Siemens Gamesa SWT-7.0-154
+Siemens Gamesa SG 8.0-167 DD
+Siemens Gamesa SWT-8.4-167
+Siemens Gamesa 11.0-200 DD
+Siemens Gamesa SG 14-236 DD
+Siemens Gamesa 14-222 DD
+GE Haliade 150-6MW
+GE Wind Energy Haliade-X 13MW or 13.6MW
+Mingyang Wind Power MySE 12-242 12MW
+Mingyang MY-5.5 MW
+MingYang MySE5.5-155
+Mingyang MySE6.45-180
+CSIC Haizhuang H220-8.35
+MySE6.8-158
+MySE8.3-180
+
+### Prototypes:
+Siemens Gamesa SG DD-276 21.5MW
+Mingyang Wind Power MySE18.X-20MW 18.X to 20MW
+Dongfang Electric DEW-18MW-260 18MW
+Mingyang Wind Power MySE16.0-260 16MW
+Goldwind GWH252 16MW
+GE Wind Energy Haliade-X 14.7
+
+### Concept Designs:
+Dongfang Electric DEW-26MW-310
+Mingyang Wind Power MySE22MW
+CSSC Haizhuang H260-18MW
+
+### Power Curves for Analysis
+However most of the turbines listed above, especially the newer and more powerful turbines do not have power curves in the bReeze package, and they are not freely available online. So that this analysis can progress, and consider a range of turbines, all turbines rated 3MW or above from bReeze will be used.
+
+"Enercon_E101_3.0MW.pow" 
+"Enercon_E126_7.5MW.pow"
+"Enercon_E82_3.0MW.pow"
+"Vestas_V164_7.0MW_os.pow"  
+"Vestas_V90_3.0MW.pow"          
+"Vestas_V90_3.0MW.pow"
+"Vestas_V112_3MW.pow"
+"Leitwind_LTW101_3.0MW.pow"
+"Repower_5M_5.0MW.pow" 
+"Siemens_SWT-3.6MW-107m.pow"
+"Siemens_SWT-3.6MW-120m.pow" 
+
+
+```{r}
+PC_File <- c("Enercon_E101_3.0MW.pow", "Enercon_E126_7.5MW.pow", "Enercon_E82_3.0MW.pow", "Vestas_V164_7.0MW_os.pow", "Vestas_V90_3.0MW.pow", "Vestas_V90_3.0MW.pow", "Vestas_V112_3MW.pow", "Leitwind_LTW101_3.0MW.pow", "Repower_5M_5.0MW.pow", "Siemens_SWT-3.6MW-107m.pow", "Siemens_SWT-3.6MW-120m.pow" )
+
+# Make into a dataframe so we can add a column for rated power and hub height. 
+Power_Curves <- as.data.frame(pc_to_use)
+head(Power_Curves)
+
+# Power Curve file does not contain the hub height, it does contain the air density the curve was developed with, and we'll need to know this later on. 
+
+# The hub heights were looked up online
+
+# import power curve 
+pc1 <- pc("Vestas_V164_7.0MW_os.pow") 
+plot(pc, cp=TRUE, ct=TRUE)
+```
+
 ## Annual Energy Production Estimation
 Now we need to apply some existing turbine power curves to get an idea of the actual power that we could extract. 
 
-### Apply Power Curves
-Write a loop function that one by one pulls out the power curves, applies them, puts the results in a table and 
-Test first how to apply the power curve
 ```{r}
 # Convert POSIXct to POSIXlt
 Wind_Data$datetime_lt <- as.POSIXlt(Wind_Data$datetime)
@@ -291,20 +352,16 @@ Wind_Data_set
 
 ```{r}
 # calculate wind profile 
-#pf <-  windprofile(mast = Wind_Data_mast, v.set = 1, dir.set=1, num.sectors=12, method=c("hellman", "loglm", "fixed"), alpha=NULL, digits=1, print=TRUE)
+pf <-  windprofile(mast = Wind_Data_mast, v.set = 1, dir.set=1, num.sectors=12, method=c("hellman", "loglm", "fixed"), alpha=NULL, digits=1, print=TRUE)
 
-    # import power curve 
-#pc <- pc("Vestas_V236_15.0MW.pow") 
-#pc$v
-#pc$P
-#plot(pc, cp=TRUE, ct=TRUE)
-
-print.pc(pc)
 
 day.plot(mast = Wind_Data_mast, set = 1, dir.set = 1, signal = "v.avg")
 
 ```
 
+### Apply Power Curves
+Write a loop function that one by one pulls out the power curves, applies them, puts the results in a table and 
+Test first how to apply the power curve
 ```{r}
 # calculate annual energy production 
 aep <- aep(profile=pf, pc=pc, hub.h=135) 
