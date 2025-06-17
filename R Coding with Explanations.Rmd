@@ -603,5 +603,4 @@ AEP_Plot_1_hhmax <- plot(aep_1_hhmax)
 
 # plot energy production over typical day
 
-
 ```
