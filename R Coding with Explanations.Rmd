@@ -584,22 +584,22 @@ AEP_Plot_9_hhmax <- plot(aep_9_hhmax)
 #### Siemens SWT
 ```{r}
 # Power curve 
-pc_1 <- pc(Power_Curves$PC_File[1])
-plot(pc_1, cp=TRUE, ct=TRUE)
+pc_10 <- pc(Power_Curves$PC_File[10])
+plot(pc_10, cp=TRUE, ct=TRUE)
 
 # Hub Height min & max
-hh1_min <- Power_Curves$HH_min_m[1]
-hh1_max <- Power_Curves$HH_max_m[1]
+hh10_min <- Power_Curves$HH_min_m[10]
+hh10_max <- Power_Curves$HH_max_m[10]
 
 # calculate annual energy production with minimum hub height
-aep_1_hhmin <- aep(profile = pf, pc = pc_1, hub.h = hh1_min) 
-capacity_1_hhmin <- aep_1_hhmin$capacity
-AEP_Plot_1_hhmin <- plot(aep_1_hhmin)
+aep_10_hhmin <- aep(profile = pf, pc = pc_10, hub.h = hh10_min) 
+capacity_10_hhmin <- aep_10_hhmin$capacity
+AEP_Plot_10_hhmin <- plot(aep_10_hhmin)
 
 # calculate annual energy production with maximum hub height
-aep_1_hhmax <- aep(profile = pf, pc = pc_1, hub.h = hh1_max) 
-capacity_1_hhmax <- aep_1_hhmax$capacity
-AEP_Plot_1_hhmax <- plot(aep_1_hhmax)
+aep_10_hhmax <- aep(profile = pf, pc = pc_10, hub.h = hh10_max) 
+capacity_10_hhmax <- aep_10_hhmax$capacity
+AEP_Plot_10_hhmax <- plot(aep_10_hhmax)
 
 # plot energy production over typical day
 
